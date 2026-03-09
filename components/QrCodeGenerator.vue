@@ -74,7 +74,7 @@ tel:13800138000,联系电话"
 </template>
 
 <script>
-import QRCode from 'qrcode'
+import qrcode from 'qrcode-generator'
 
 export default {
   data() {
@@ -134,24 +134,59 @@ export default {
       })
     },
     
-    async drawQRCode(text, index) {
+    drawQRCode(text, index) {
       const canvas = this.canvasRefs[index]
       if (!canvas) return
       
       try {
-        await QRCode.toCanvas(canvas, text, {
-          width: this.qrSize,
-          margin: 1,
-          color: {
-            dark: this.foregroundColor,
-            light: this.backgroundColor
-          },
-          errorCorrectionLevel: this.errorLevel
-        })
+        // 创建二维码对象
+        const typeNumber = this.getTypeNumber(text.length)
+        const qr = qrcode(typeNumber, this.errorLevel)
+        qr.addData(text)
+        qr.make()
+        
+        // 获取二维码模块数量
+        const moduleCount = qr.getModuleCount()
+        const cellSize = Math.floor(this.qrSize / moduleCount)
+        const size = cellSize * moduleCount
+        
+        // 设置canvas大小
+        canvas.width = size
+        canvas.height = size
+        
+        const ctx = canvas.getContext('2d')
+        
+        // 绘制背景
+        ctx.fillStyle = this.backgroundColor
+        ctx.fillRect(0, 0, size, size)
+        
+        // 绘制二维码
+        ctx.fillStyle = this.foregroundColor
+        for (let row = 0; row < moduleCount; row++) {
+          for (let col = 0; col < moduleCount; col++) {
+            if (qr.isDark(row, col)) {
+              ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+            }
+          }
+        }
       } catch (error) {
         console.error('生成二维码失败:', error)
         this.errorMessage = `生成第 ${index + 1} 个二维码失败: ${error.message}`
       }
+    },
+    
+    getTypeNumber(length) {
+      // 根据内容长度选择合适的二维码版本
+      if (length <= 20) return 1
+      if (length <= 38) return 2
+      if (length <= 61) return 3
+      if (length <= 90) return 4
+      if (length <= 122) return 5
+      if (length <= 154) return 6
+      if (length <= 192) return 7
+      if (length <= 230) return 8
+      if (length <= 271) return 9
+      return 10
     },
     
     downloadSingle(index) {
