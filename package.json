@@ -15,6 +15,7 @@
   "homepage": "https://github.com/Paper-Dragon/vuepress-plugin-small-tools#readme",
   "keywords": [
     "vuepress",
+    "vuepress-plugin",
     "plugin",
     "totp",
     "2fa",
@@ -31,7 +32,8 @@
     "index.js",
     "enhanceApp.js",
     "clientRootMixin.js",
-    "README.md"
+    "README.md",
+    "USAGE.md"
   ],
   "peerDependencies": {
     "vuepress": "^1.0.0"

@@ -22,6 +22,8 @@ pnpm add vuepress-plugin-small-tools
 
 ### 1. 配置插件
 
+#### VuePress 标准配置
+
 在 VuePress 配置文件 `.vuepress/config.js` 中添加插件：
 
 ```js
@@ -31,6 +33,27 @@ module.exports = {
   ]
 }
 ```
+
+#### VuePress Theme Hope 配置
+
+在 `.vuepress/config.ts` 中添加插件：
+
+```typescript
+import { defineUserConfig } from "vuepress";
+import { hopeTheme } from "vuepress-theme-hope";
+
+export default defineUserConfig({
+  theme: hopeTheme({
+    // 主题配置
+  }),
+  
+  plugins: [
+    ["vuepress-plugin-small-tools"]
+  ],
+});
+```
+
+**详细配置指南：** 查看 [VuePress Hope 使用指南](./VUEPRESS-HOPE-GUIDE.md)
 
 ### 2. 在 Markdown 中使用
 
