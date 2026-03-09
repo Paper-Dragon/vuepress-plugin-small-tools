@@ -77,7 +77,7 @@ tel:13800138000,联系电话"
 export default {
   data() {
     return {
-      inputText: '',
+      inputText: 'www.geekery.cn,运维开发绿皮书\nwww.google.com,Google',
       qrSize: 300,
       foregroundColor: '#000000',
       backgroundColor: '#ffffff',
