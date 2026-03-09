@@ -3,8 +3,43 @@
   "version": "0.0.1",
   "description": "VuePress plugin providing multiple practical tool components",
   "main": "index.js",
-  "keywords": ["vuepress", "plugin", "totp", "2fa", "tools", "utilities", "base64", "cron", "password-generator"],
+  "author": "Paper-Dragon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Paper-Dragon/vuepress-plugin-small-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Paper-Dragon/vuepress-plugin-small-tools/issues"
+  },
+  "homepage": "https://github.com/Paper-Dragon/vuepress-plugin-small-tools#readme",
+  "keywords": [
+    "vuepress",
+    "plugin",
+    "totp",
+    "2fa",
+    "tools",
+    "utilities",
+    "base64",
+    "cron",
+    "password-generator",
+    "frp",
+    "text-reverse"
+  ],
+  "files": [
+    "components",
+    "index.js",
+    "enhanceApp.js",
+    "clientRootMixin.js",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "vuepress": "^1.0.0"
+  },
   "dependencies": {
     "otpauth": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=12.0.0"
   }
 }
