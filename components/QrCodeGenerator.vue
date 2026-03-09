@@ -45,8 +45,8 @@ tel:13800138000,联系电话"
       
       <div class="button-row">
         <button @click="generateQRCodes" class="btn-generate">生成二维码</button>
-        <button @click="downloadAll" class="btn-download" :disabled="qrCodes.length === 0">
-          一键下载全部 ({{ qrCodes.length }})
+        <button @click="downloadAllAsZip" class="btn-download" :disabled="qrCodes.length === 0">
+          下载压缩包 ({{ qrCodes.length }})
         </button>
         <button @click="clearAll" class="btn-clear">清空</button>
       </div>
@@ -59,7 +59,6 @@ tel:13800138000,联系电话"
           <div class="qrcode-wrapper">
             <canvas :ref="el => setCanvasRef(el, index)" class="qrcode-canvas"></canvas>
           </div>
-          <div class="qrcode-label">{{ item.label }}</div>
           <button @click="downloadSingle(index)" class="btn-download-single">
             下载
           </button>
@@ -75,6 +74,7 @@ tel:13800138000,联系电话"
 
 <script>
 import qrcode from 'qrcode-generator'
+import JSZip from 'jszip'
 
 export default {
   data() {
@@ -129,64 +129,86 @@ export default {
       // 等待DOM更新后生成二维码
       this.$nextTick(() => {
         this.qrCodes.forEach((item, index) => {
-          this.drawQRCode(item.content, index)
+          this.drawQRCode(item.content, item.label, index)
         })
       })
     },
     
-    drawQRCode(text, index) {
+    drawQRCode(text, label, index) {
       const canvas = this.canvasRefs[index]
       if (!canvas) return
       
       try {
-        // 创建二维码对象
-        const typeNumber = this.getTypeNumber(text.length)
-        const qr = qrcode(typeNumber, this.errorLevel)
+        // 创建二维码对象，使用0让库自动选择合适的版本
+        const qr = qrcode(0, this.errorLevel)
         qr.addData(text)
         qr.make()
         
         // 获取二维码模块数量
         const moduleCount = qr.getModuleCount()
-        const cellSize = Math.floor(this.qrSize / moduleCount)
-        const size = cellSize * moduleCount
+        const cellSize = 8 // 每个模块8像素
+        const qrCodeSize = cellSize * moduleCount
+        const padding = 20
+        const labelHeight = 40
         
-        // 设置canvas大小
-        canvas.width = size
-        canvas.height = size
+        // 设置canvas大小（二维码 + 上下padding + 底部标签区域）
+        const canvasWidth = qrCodeSize + padding * 2
+        const canvasHeight = qrCodeSize + padding * 2 + labelHeight
+        
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
         
         const ctx = canvas.getContext('2d')
         
-        // 绘制背景
+        // 绘制白色背景
         ctx.fillStyle = this.backgroundColor
-        ctx.fillRect(0, 0, size, size)
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight)
         
-        // 绘制二维码
+        // 绘制二维码（居中，留出上下padding）
+        const qrStartX = padding
+        const qrStartY = padding
+        
         ctx.fillStyle = this.foregroundColor
         for (let row = 0; row < moduleCount; row++) {
           for (let col = 0; col < moduleCount; col++) {
             if (qr.isDark(row, col)) {
-              ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
+              ctx.fillRect(
+                qrStartX + col * cellSize,
+                qrStartY + row * cellSize,
+                cellSize,
+                cellSize
+              )
             }
           }
         }
+        
+        // 绘制底部标签文字
+        ctx.fillStyle = '#333333'
+        ctx.font = '14px Arial, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        
+        // 文字换行处理
+        const maxWidth = canvasWidth - padding * 2
+        const words = label.split('')
+        let line = ''
+        let y = qrCodeSize + padding * 2 + labelHeight / 2
+        
+        // 简单的文字截断，如果太长就显示省略号
+        if (ctx.measureText(label).width > maxWidth) {
+          let truncated = label
+          while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
+            truncated = truncated.slice(0, -1)
+          }
+          ctx.fillText(truncated + '...', canvasWidth / 2, y)
+        } else {
+          ctx.fillText(label, canvasWidth / 2, y)
+        }
+        
       } catch (error) {
         console.error('生成二维码失败:', error)
         this.errorMessage = `生成第 ${index + 1} 个二维码失败: ${error.message}`
       }
-    },
-    
-    getTypeNumber(length) {
-      // 根据内容长度选择合适的二维码版本
-      if (length <= 20) return 1
-      if (length <= 38) return 2
-      if (length <= 61) return 3
-      if (length <= 90) return 4
-      if (length <= 122) return 5
-      if (length <= 154) return 6
-      if (length <= 192) return 7
-      if (length <= 230) return 8
-      if (length <= 271) return 9
-      return 10
     },
     
     downloadSingle(index) {
@@ -205,16 +227,43 @@ export default {
       })
     },
     
-    async downloadAll() {
+    async downloadAllAsZip() {
       if (this.qrCodes.length === 0) return
       
-      for (let i = 0; i < this.qrCodes.length; i++) {
-        await new Promise(resolve => {
-          setTimeout(() => {
-            this.downloadSingle(i)
-            resolve()
-          }, 100 * i) // 延迟下载，避免浏览器阻止
-        })
+      try {
+        const zip = new JSZip()
+        
+        // 将所有canvas转换为blob并添加到zip
+        for (let i = 0; i < this.qrCodes.length; i++) {
+          const canvas = this.canvasRefs[i]
+          const item = this.qrCodes[i]
+          
+          if (canvas) {
+            // 使用Promise包装toBlob
+            const blob = await new Promise(resolve => {
+              canvas.toBlob(resolve)
+            })
+            
+            // 添加到zip，确保文件名唯一
+            const filename = `${item.label}.png`
+            zip.file(filename, blob)
+          }
+        }
+        
+        // 生成zip文件
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        
+        // 下载zip文件
+        const url = URL.createObjectURL(zipBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `二维码批量_${new Date().getTime()}.zip`
+        a.click()
+        URL.revokeObjectURL(url)
+        
+      } catch (error) {
+        console.error('生成压缩包失败:', error)
+        this.errorMessage = '生成压缩包失败: ' + error.message
       }
     },
     
@@ -374,7 +423,6 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 150px;
 }
 
 .qrcode-canvas {
@@ -382,13 +430,6 @@ button {
   height: auto;
   border: 1px solid #eee;
   border-radius: 4px;
-}
-
-.qrcode-label {
-  margin: 10px 0;
-  font-size: 14px;
-  color: #666;
-  word-break: break-all;
 }
 
 .btn-download-single {
