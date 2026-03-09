@@ -11,6 +11,7 @@ VuePress 插件，提供多种实用工具组件的集合。
 - 📝 **Base64编码解码** - 支持文本和图片的Base64编码解码，多种字符编码
 - 🐟 **摸鱼时钟** - 上班摸鱼计时器，实时显示距离下班时间和今日收益
 - 🌐 **FRP状态监控** - FRP内网穿透服务监控，实时查看代理服务状态和流量统计
+- 📱 **二维码批量生成器** - 批量生成二维码，支持自定义样式、颜色和一键下载
 
 ## 安装
 
@@ -82,6 +83,9 @@ export default defineUserConfig({
 
 ## FRP状态监控
 <Frp />
+
+## 二维码批量生成器
+<QrCodeGenerator />
 ```
 
 ## 组件说明
@@ -146,6 +150,17 @@ export default defineUserConfig({
 - 支持自定义API地址和认证信息
 - 配置信息本地保存
 
+### 二维码批量生成器
+
+- 批量生成多个二维码
+- 支持逗号分隔格式：内容,文件名
+- 自定义二维码大小（100-1000px）
+- 自定义前景色和背景色
+- 可选容错级别（L/M/Q/H）
+- 网格展示，图片+标签模式
+- 单个下载或一键批量下载
+- 纯前端实现，无需依赖外部库
+
 ## 数据存储
 
 - 所有数据仅存储在浏览器本地（localStorage）
@@ -188,7 +203,8 @@ vuepress-plugin-small-tools/
 │   ├── Cron.vue
 │   ├── Base64Codec.vue
 │   ├── OxHorseClock.vue
-│   └── Frp.vue
+│   ├── Frp.vue
+│   └── QrCodeGenerator.vue
 ├── enhanceApp.js        # 组件注册
 ├── clientRootMixin.js   # 客户端混入
 ├── index.js             # 插件入口

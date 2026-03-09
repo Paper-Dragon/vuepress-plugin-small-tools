@@ -71,6 +71,9 @@ export default defineConfig({
 
 # FRP状态监控
 <Frp />
+
+# 二维码批量生成器
+<QrCodeGenerator />
 ```
 
 ## 组件名称对照表
@@ -84,6 +87,7 @@ export default defineConfig({
 | Base64Codec.vue | Base64Codec | `<Base64Codec />` |
 | OxHorseClock.vue | OxHorseClock | `<OxHorseClock />` |
 | Frp.vue | Frp | `<Frp />` |
+| QrCodeGenerator.vue | QrCodeGenerator | `<QrCodeGenerator />` |
 
 ## 常见问题
 

@@ -6,6 +6,7 @@ import Cron from './components/Cron.vue'
 import Base64Codec from './components/Base64Codec.vue'
 import OxHorseClock from './components/OxHorseClock.vue'
 import Frp from './components/Frp.vue'
+import QrCodeGenerator from './components/QrCodeGenerator.vue'
 
 export default defineClientConfig({
   enhance({ app, router, siteData }) {
@@ -17,6 +18,7 @@ export default defineClientConfig({
     app.component('Base64Codec', Base64Codec)
     app.component('OxHorseClock', OxHorseClock)
     app.component('Frp', Frp)
+    app.component('QrCodeGenerator', QrCodeGenerator)
   },
   
   setup() {

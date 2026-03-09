@@ -5,6 +5,7 @@ import Cron from './components/Cron.vue';
 import Base64Codec from './components/Base64Codec.vue';
 import OxHorseClock from './components/OxHorseClock.vue';
 import Frp from './components/Frp.vue';
+import QrCodeGenerator from './components/QrCodeGenerator.vue';
 
 export default ({ Vue, options, router, siteData }) => {
   Vue.component('Totp', Totp);
@@ -14,4 +15,5 @@ export default ({ Vue, options, router, siteData }) => {
   Vue.component('Base64Codec', Base64Codec);
   Vue.component('OxHorseClock', OxHorseClock);
   Vue.component('Frp', Frp);
+  Vue.component('QrCodeGenerator', QrCodeGenerator);
 };
