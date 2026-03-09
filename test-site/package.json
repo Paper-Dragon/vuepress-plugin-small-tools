@@ -9,6 +9,6 @@
     "vuepress": "^1.9.10"
   },
   "dependencies": {
-    "vuepress-theme-plugin-small-tools": "link:.."
+    "vuepress-plugin-small-tools": "link:.."
   }
 }

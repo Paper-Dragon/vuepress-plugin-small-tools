@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = (options = {}, context) => {
   return {
-    name: 'vuepress-theme-plugin-small-tools',
+    name: 'vuepress-plugin-small-tools',
     
     enhanceAppFiles: [
       path.resolve(__dirname, 'enhanceApp.js')
