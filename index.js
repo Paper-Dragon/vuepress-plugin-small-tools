@@ -1,13 +1,13 @@
-const path = require('path');
+const { resolve } = require('path');
 
 module.exports = (options = {}, context) => {
   return {
     name: 'vuepress-plugin-small-tools',
     
     enhanceAppFiles: [
-      path.resolve(__dirname, 'enhanceApp.js')
+      resolve(__dirname, 'enhanceApp.js')
     ],
     
-    clientRootMixin: path.resolve(__dirname, 'clientRootMixin.js')
+    clientConfigFile: resolve(__dirname, './client.js').replace(/\\/g, '/')
   };
 };
