@@ -1,6 +1,6 @@
 {
   "name": "vuepress-plugin-small-tools",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "VuePress plugin providing multiple practical tool components",
   "main": "index.js",
   "author": "Paper-Dragon",
