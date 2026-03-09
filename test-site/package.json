@@ -1,0 +1,14 @@
+{
+  "name": "test-site",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vuepress dev",
+    "build": "vuepress build"
+  },
+  "devDependencies": {
+    "vuepress": "^1.9.10"
+  },
+  "dependencies": {
+    "vuepress-theme-plugin-small-tools": "link:.."
+  }
+}

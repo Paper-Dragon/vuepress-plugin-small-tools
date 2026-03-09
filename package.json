@@ -1,0 +1,10 @@
+{
+  "name": "vuepress-plugin-small-tools",
+  "version": "0.0.1",
+  "description": "VuePress plugin providing multiple practical tool components",
+  "main": "index.js",
+  "keywords": ["vuepress", "plugin", "totp", "2fa", "tools", "utilities", "base64", "cron", "password-generator"],
+  "dependencies": {
+    "otpauth": "^9.0.0"
+  }
+}
