@@ -1,68 +1,73 @@
 <template>
   <div class="ox-clock">
-    <div class="glass-panel">
-      <div class="dashboard">
-        <div class="time-display">
-          <h2 class="status-title" :data-status="countdown.status">
-            <template v-if="countdown.status === 'working'">
-              摸鱼中... 距离下班还有
-            </template>
-            <template v-else-if="countdown.status === 'beforeWork'">
-              下班啦 🎉 距离今天摸鱼还有
-            </template>
-            <template v-else-if="countdown.status === 'afterWork'">
-              下班啦 🎉 距离明天摸鱼还有
-            </template>
-          </h2>
-          <div class="time-row">
-            <div class="time-item">
-              <div class="number">{{ countdown.hours }}</div>
-              <span class="label">时</span>
-            </div>
-            <div class="time-item">
-              <div class="number">{{ countdown.minutes }}</div>
-              <span class="label">分</span>
-            </div>
-            <div class="time-item">
-              <div class="number" :data-offwork="countdown.isOffWork">{{ countdown.seconds }}</div>
-              <span class="label">秒</span>
-            </div>
-          </div>
+    <!-- 主显示区 -->
+    <div class="clock-display">
+      <div class="status-badge" :class="countdown.status">
+        <span v-if="countdown.status === 'working'">🐂 上班中</span>
+        <span v-else>🎉 下班了</span>
+      </div>
+      
+      <div class="countdown-wrapper">
+        <div class="countdown-label">
+          {{ countdown.status === 'working' ? '距离下班' : '距离上班' }}
         </div>
-        
-        <div class="earning-display">
-          <div class="today">
-            <h3>今日已赚</h3>
-            <div class="amount">¥ {{ todayEarnings.toFixed(2) }}</div>
+        <div class="time-blocks">
+          <div class="time-block">
+            <div class="time-value">{{ String(countdown.hours).padStart(2, '0') }}</div>
+            <div class="time-unit">时</div>
+          </div>
+          <div class="time-colon">:</div>
+          <div class="time-block">
+            <div class="time-value">{{ String(countdown.minutes).padStart(2, '0') }}</div>
+            <div class="time-unit">分</div>
+          </div>
+          <div class="time-colon">:</div>
+          <div class="time-block">
+            <div class="time-value">{{ String(countdown.seconds).padStart(2, '0') }}</div>
+            <div class="time-unit">秒</div>
           </div>
         </div>
       </div>
       
-      <!-- 设置面板 -->
-      <div class="settings-panel">
-        <div class="input-row">
-          <div class="input-group">
-            <label>月薪（¥）</label>
+      <div class="earnings-card">
+        <div class="earnings-icon">💰</div>
+        <div class="earnings-info">
+          <div class="earnings-label">今日收益</div>
+          <div class="earnings-value">¥{{ todayEarnings.toFixed(2) }}</div>
+        </div>
+        <div class="earnings-rate">
+          <div class="rate-label">时薪</div>
+          <div class="rate-value">¥{{ hourlyRate }}/h</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 设置区 -->
+    <div class="settings-section">
+      <div class="settings-header">⚙️ 设置</div>
+      <div class="settings-content">
+        <div class="setting-row">
+          <div class="setting-field">
+            <label>💵 月薪</label>
             <input v-model.number="monthlySalary" type="number" min="0" step="100">
           </div>
-          <div class="input-group">
-            <label>工作日（天）</label>
+          <div class="setting-field">
+            <label>📅 工作日</label>
             <input v-model.number="workDays" type="number" min="1" max="31">
           </div>
         </div>
-        
-        <div class="input-row">
-          <div class="input-group">
-            <label>上班时间</label>
+        <div class="setting-row">
+          <div class="setting-field">
+            <label>🌅 上班</label>
             <input v-model="startTime" type="time">
           </div>
-          <div class="input-group">
-            <label>午休时长（小时）</label>
-            <input v-model.number="restHours" type="number" min="0" max="10" step="0.5">
-          </div>
-          <div class="input-group">
-            <label>下班时间</label>
+          <div class="setting-field">
+            <label>🌆 下班</label>
             <input v-model="endTime" type="time">
+          </div>
+          <div class="setting-field">
+            <label>😴 午休</label>
+            <input v-model.number="restHours" type="number" min="0" max="10" step="0.5">
           </div>
         </div>
       </div>
@@ -85,300 +90,257 @@ export default {
   },
   computed: {
     dailyHours() {
-      const parseMinutes = time => {
-        try {
-          const [h, m] = time.split(':').map(Number)
-          return h * 60 + (m || 0)
-        } catch {
-          return 0
-        }
-      }
-      
-      const start = parseMinutes(this.startTime)
-      const end = parseMinutes(this.endTime)
-      let totalMinutes = end - start
-      if (totalMinutes < 0) totalMinutes += 1440
-      
-      const rest = Math.min(Math.max(this.restHours * 60, 0), 8 * 60)
-      if (rest > totalMinutes) return 0
-      
-      const effective = Math.max(totalMinutes - rest, 0)
-      return Number((effective / 60).toFixed(2))
+      const parseTime = t => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0) }
+      let total = parseTime(this.endTime) - parseTime(this.startTime)
+      if (total < 0) total += 1440
+      return Math.max((total - Math.min(this.restHours * 60, total)) / 60, 0)
     },
     hourlyRate() {
-      const baseHours = Math.max(this.dailyHours, 0.01)
-      return Number((this.monthlySalary / this.workDays / baseHours).toFixed(2))
+      return Number((this.monthlySalary / this.workDays / Math.max(this.dailyHours, 0.01)).toFixed(2))
     },
     todayEarnings() {
       const now = new Date(this.timeStamp)
-      const todayStart = new Date(now)
-      const [startH, startM] = this.startTime.split(':').map(Number)
-      todayStart.setHours(startH, startM, 0, 0)
-      
-      const todayEnd = new Date(now)
-      const [endH, endM] = this.endTime.split(':').map(Number)
-      todayEnd.setHours(endH, endM, 0, 0)
-      
-      if (todayEnd < todayStart) todayEnd.setDate(todayEnd.getDate() + 1)
-      
-      const restMilliseconds = this.restHours * 60 * 60 * 1000
-      const maxWorkSeconds = (todayEnd - todayStart - restMilliseconds) / 1000
-      
-      let workSeconds = 0
-      const restStart = new Date(todayStart)
-      restStart.setHours(12, 0, 0, 0)
-      const restEnd = new Date(restStart.getTime() + this.restHours * 60 * 60 * 1000)
-      
-      let adjustedNow = now
-      if (now > restStart && now < restEnd) {
-        adjustedNow = restEnd
-      }
-      
-      const currentSeconds = Math.min(
-        Math.max((adjustedNow - todayStart) / 1000, 0),
-        maxWorkSeconds
-      )
-      workSeconds = currentSeconds
-      
-      if (now > todayEnd) {
-        workSeconds = maxWorkSeconds
-      }
-      
-      return this.hourlyRate * (workSeconds / 3600)
+      const [sh, sm] = this.startTime.split(':').map(Number)
+      const [eh, em] = this.endTime.split(':').map(Number)
+      const start = new Date(now).setHours(sh, sm, 0, 0)
+      const end = new Date(now).setHours(eh, em, 0, 0)
+      const maxSec = (end - start) / 1000 - this.restHours * 3600
+      const worked = Math.min(Math.max((now - start) / 1000, 0), maxSec)
+      return Number((this.hourlyRate * worked / 3600).toFixed(2))
     },
     countdown() {
       const now = new Date(this.timeStamp)
-      const todayStart = new Date(now)
-      const [startH, startM] = this.startTime.split(':').map(Number)
-      todayStart.setHours(startH, startM, 0, 0)
+      const [sh, sm] = this.startTime.split(':').map(Number)
+      const [eh, em] = this.endTime.split(':').map(Number)
+      const start = new Date(now).setHours(sh, sm, 0, 0)
+      const end = new Date(now).setHours(eh, em, 0, 0)
       
-      const todayEnd = new Date(now)
-      const [endH, endM] = this.endTime.split(':').map(Number)
-      todayEnd.setHours(endH, endM, 0, 0)
+      let target = end
+      const isOffWork = now < start || now >= end
+      if (isOffWork) target = now < start ? start : new Date(start).setDate(now.getDate() + 1)
       
-      if (todayEnd < todayStart) todayEnd.setDate(todayEnd.getDate() + 1)
-      
-      let targetTime = todayEnd
-      let isOffWork = now < todayStart || now >= todayEnd
-      
-      if (isOffWork) {
-        if (now < todayStart) {
-          targetTime = todayStart
-        } else {
-          targetTime = new Date(todayStart)
-          targetTime.setDate(targetTime.getDate() + 1)
-        }
-      }
-      
-      const diff = targetTime - now
-      
+      const diff = target - now
       return {
         hours: Math.floor(diff / 3600000),
         minutes: Math.floor((diff % 3600000) / 60000),
         seconds: Math.floor((diff % 60000) / 1000),
-        isOffWork,
-        status: now < todayStart ? 'beforeWork' : (now >= todayEnd ? 'afterWork' : 'working')
+        status: now < start ? 'beforeWork' : (now >= end ? 'afterWork' : 'working')
       }
     }
   },
   watch: {
-    startTime() {
-      this.timeStamp = Date.now()
-    },
-    endTime() {
-      this.timeStamp = Date.now()
-    },
-    restHours() {
-      this.timeStamp = Date.now()
-    }
+    startTime() { this.timeStamp = Date.now() },
+    endTime() { this.timeStamp = Date.now() },
+    restHours() { this.timeStamp = Date.now() }
   },
   mounted() {
-    this.updateInterval = setInterval(() => {
-      this.timeStamp = Date.now()
-    }, 1000)
+    this.updateInterval = setInterval(() => this.timeStamp = Date.now(), 1000)
   },
   beforeDestroy() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval)
-    }
+    clearInterval(this.updateInterval)
   }
 }
 </script>
 
 <style scoped>
-:root {
-  --primary-color: #6C7A89;
-  --secondary-color: #8D9CAF;
-  --text-shadow: 0 0 15px rgba(108, 122, 137, 0.3);
-  --bg-gradient: linear-gradient(135deg, rgba(140, 160, 180, 0.15) 0%, rgba(100, 120, 140, 0.1) 100%);
-  --panel-bg: rgba(0, 0, 0, 0.3);
+.ox-clock {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0;
 }
 
-.ox-clock {
-  position: relative;
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(210, 225, 240, 0.3) 0%, rgba(190, 210, 230, 0.25) 100%);
-  backdrop-filter: blur(10px);
+.clock-display {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.status-badge.working {
+  background: rgba(251, 191, 36, 0.25);
+}
+
+.status-badge.afterWork,
+.status-badge.beforeWork {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.countdown-wrapper {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.countdown-label {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.time-blocks {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-block {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 65px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.time-value {
+  font-size: 28px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.time-unit {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.time-colon {
+  font-size: 24px;
+  font-weight: 600;
+  opacity: 0.5;
+}
+
+.earnings-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.earnings-icon {
+  font-size: 28px;
+}
+
+.earnings-info {
+  flex: 1;
+}
+
+.earnings-label {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-bottom: 3px;
+}
+
+.earnings-value {
+  font-size: 22px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.earnings-rate {
+  text-align: right;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.rate-label {
+  font-size: 10px;
+  opacity: 0.65;
+  margin-bottom: 2px;
+}
+
+.rate-value {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.settings-section {
+  margin-top: 12px;
+  background: #f3f4f6;
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.status-title {
-  text-align: center;
-  color: #4A5568;
-  margin-bottom: 1.5rem;
-  font-size: 1.8em;
-  transition: all 0.3s ease;
+.settings-header {
+  padding: 10px 14px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 13px;
+  background: #e5e7eb;
 }
 
-.status-title[data-offwork="true"] {
-  color: #4CAF50;
-  transform: scale(1.1);
-  animation: celebrate 2s ease-in-out infinite;
+.settings-content {
+  padding: 14px;
+  border-top: 1px solid #d1d5db;
 }
 
-.time-item[data-offwork="true"] .number {
-  opacity: 0.3;
-  filter: blur(2px);
-}
-
-.glass-panel {
-  padding: 2rem;
-  background: rgba(225, 235, 245, 0.2);
-  border-radius: 15px;
-  margin-bottom: 1.5rem;
-  backdrop-filter: blur(20px);
-}
-
-.dashboard {
+.setting-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.time-display {
-  display: grid;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.time-row {
-  display: flex;
-  justify-content: center;
-  gap: 1.2rem;
-}
-
-.time-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1.2rem;
-  background: linear-gradient(145deg, rgba(140, 160, 185, 0.3) 0%, rgba(190, 210, 230, 0.25) 100%);
-  border-radius: 15px;
-}
-
-.number {
-  font-size: 3.5em;
-  min-width: 1.6em;
-  display: inline-block;
-  text-align: center;
-  font-family: 'Courier New', monospace;
-  font-variant-numeric: tabular-nums;
-  color: #2D3748;
-  text-shadow: var(--text-shadow);
-  line-height: 1;
-  transition: opacity 0.3s;
-  margin: 0 auto;
-}
-
-.label {
-  font-size: 1.2em;
-  color: #4A5568;
-  margin-top: 0.5rem;
-  opacity: 0.9;
-}
-
-.earning-display {
-  text-align: center;
-}
-
-.amount {
-  font-size: 2.2em;
-  color: #2D3748;
-  margin: 1rem 0;
-  text-shadow: var(--text-shadow);
-  font-family: 'Courier New';
-}
-
-@keyframes celebrate {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.settings-panel {
-  padding: 1.5rem;
-  background: var(--panel-bg);
-  border-radius: 15px;
-}
-
-.input-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.input-group {
+.setting-row:last-child {
   margin-bottom: 0;
 }
 
-.input-group label {
+.setting-field label {
   display: block;
-  color: #4A5568;
-  margin-bottom: 0.5rem;
-  font-size: 0.9em;
-  opacity: 0.8;
+  font-size: 11px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 5px;
 }
 
-input {
-  width: 70%;
-  max-width: 300px;
-  padding: 0.8rem 1.2rem;
-  background: rgba(108, 122, 137, 0.15);
-  border: 1px solid var(--primary-color);
-  border-radius: 12px;
-  color: var(--primary-color);
-  font-family: inherit;
-  font-size: 1.1em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(4px);
+.setting-field input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #374151;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
-input::placeholder {
-  color: rgba(108, 122, 137, 0.6);
-  font-weight: 300;
+.setting-field input:focus {
+  outline: none;
+  border-color: #6b7280;
 }
 
-input:focus {
-  outline: 2px solid transparent;
-  border-color: var(--secondary-color);
-  box-shadow: 0 0 20px rgba(140, 160, 180, 0.25);
-  background: rgba(108, 122, 137, 0.25);
-}
-
-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
+@media (max-width: 480px) {
+  .time-block {
+    min-width: 55px;
+    padding: 8px 10px;
+  }
+  
+  .time-value {
+    font-size: 24px;
+  }
+  
+  .earnings-value {
+    font-size: 18px;
+  }
+  
+  .setting-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

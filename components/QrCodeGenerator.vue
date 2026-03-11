@@ -1,7 +1,5 @@
 <template>
   <div class="qrcode-generator">
-    <h3>二维码批量生成器</h3>
-    
     <div class="input-section">
       <div class="input-group">
         <label>输入数据（每行一个，格式：二维码内容,文件名）</label>
@@ -18,8 +16,47 @@ tel:13800138000,联系电话"
       
       <div class="settings-row">
         <div class="setting-item">
-          <label>二维码大小</label>
-          <input type="number" v-model.number="qrSize" min="100" max="1000" step="50" />
+          <label>码版本</label>
+          <select v-model.number="qrVersion">
+            <option :value="0">自动选择</option>
+            <option :value="1">版本1 (21x21)</option>
+            <option :value="2">版本2 (25x25)</option>
+            <option :value="3">版本3 (29x29)</option>
+            <option :value="4">版本4 (33x33)</option>
+            <option :value="5">版本5 (37x37)</option>
+            <option :value="6">版本6 (41x41)</option>
+            <option :value="7">版本7 (45x45)</option>
+            <option :value="8">版本8 (49x49)</option>
+            <option :value="9">版本9 (53x53)</option>
+            <option :value="10">版本10 (57x57)</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <label>码尺寸</label>
+          <select v-model.number="qrPhysicalSize">
+            <option :value="20">20mm</option>
+            <option :value="30">30mm</option>
+            <option :value="45">45mm</option>
+            <option :value="65">65mm</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <label>编码模式</label>
+          <select v-model="qrMode">
+            <option value="Byte">Byte (通用)</option>
+            <option value="Numeric">Numeric (纯数字)</option>
+            <option value="Alphanumeric">Alphanumeric (字母数字)</option>
+          </select>
+        </div>
+        
+        <div class="setting-item">
+          <label>输出格式</label>
+          <select v-model="outputFormat">
+            <option value="png">PNG (位图)</option>
+            <option value="svg">SVG (矢量)</option>
+          </select>
         </div>
         
         <div class="setting-item">
@@ -44,11 +81,13 @@ tel:13800138000,联系电话"
       </div>
       
       <div class="button-row">
-        <button @click="generateQRCodes" class="btn-generate">生成二维码</button>
-        <button @click="downloadAllAsZip" class="btn-download" :disabled="qrCodes.length === 0">
+        <button @click="generateQRCodes" class="btn-generate" :disabled="isGenerating">
+          {{ isGenerating ? '生成中...' : '生成二维码' }}
+        </button>
+        <button @click="downloadAllAsZip" class="btn-download" :disabled="qrCodes.length === 0 || isGenerating">
           下载压缩包 ({{ qrCodes.length }})
         </button>
-        <button @click="clearAll" class="btn-clear">清空</button>
+        <button @click="clearAll" class="btn-clear" :disabled="isGenerating">清空</button>
       </div>
     </div>
     
@@ -74,19 +113,24 @@ tel:13800138000,联系电话"
 
 <script>
 import qrcode from 'qrcode-generator'
-import JSZip from 'jszip'
+import { zipSync, strToU8 } from 'fflate'
 
 export default {
   data() {
     return {
       inputText: 'www.geekery.cn,运维开发绿皮书\nwww.google.com,Google',
       qrSize: 300,
+      qrVersion: 0, // 0表示自动选择
+      qrPhysicalSize: 30, // 物理尺寸（毫米）
+      qrMode: 'Byte', // 编码模式
       foregroundColor: '#000000',
       backgroundColor: '#ffffff',
       errorLevel: 'M',
+      outputFormat: 'png', // 输出格式：png 或 svg
       qrCodes: [],
       canvasRefs: [],
-      errorMessage: ''
+      errorMessage: '',
+      isGenerating: false
     }
   },
   methods: {
@@ -100,9 +144,11 @@ export default {
       this.errorMessage = ''
       this.qrCodes = []
       this.canvasRefs = []
+      this.isGenerating = true
       
       if (!this.inputText.trim()) {
         this.errorMessage = '请输入要生成的数据'
+        this.isGenerating = false
         return
       }
       
@@ -110,10 +156,14 @@ export default {
       
       if (lines.length === 0) {
         this.errorMessage = '没有有效的数据'
+        this.isGenerating = false
         return
       }
       
-      lines.forEach(line => {
+      // 生成一个随机种子，用于本次批量生成
+      const batchSeed = Date.now()
+      
+      lines.forEach((line, idx) => {
         const parts = line.split(',')
         const content = parts[0]?.trim()
         const label = parts[1]?.trim() || '未命名'
@@ -121,7 +171,8 @@ export default {
         if (content) {
           this.qrCodes.push({
             content,
-            label
+            label,
+            seed: batchSeed + idx // 每个二维码有唯一的种子
           })
         }
       })
@@ -129,80 +180,38 @@ export default {
       // 等待DOM更新后生成二维码
       this.$nextTick(() => {
         this.qrCodes.forEach((item, index) => {
-          this.drawQRCode(item.content, item.label, index)
+          this.drawQRCode(item.content, item.label, item.seed, index)
         })
+        this.isGenerating = false
       })
     },
     
-    drawQRCode(text, label, index) {
+    drawQRCode(text, label, seed, index) {
       const canvas = this.canvasRefs[index]
       if (!canvas) return
       
       try {
-        // 创建二维码对象，使用0让库自动选择合适的版本
-        const qr = qrcode(0, this.errorLevel)
-        qr.addData(text)
-        qr.make()
+        // 创建二维码对象，使用用户选择的版本或自动选择
+        const qr = qrcode(this.qrVersion, this.errorLevel)
+        // 在内容末尾添加不可见字符（零宽空格）+ 随机种子来改变掩码
+        const invisibleChars = '\u200B'.repeat(seed % 10)
         
-        // 获取二维码模块数量
-        const moduleCount = qr.getModuleCount()
-        const cellSize = 8 // 每个模块8像素
-        const qrCodeSize = cellSize * moduleCount
-        const padding = 20
-        const labelHeight = 40
-        
-        // 设置canvas大小（二维码 + 上下padding + 底部标签区域）
-        const canvasWidth = qrCodeSize + padding * 2
-        const canvasHeight = qrCodeSize + padding * 2 + labelHeight
-        
-        canvas.width = canvasWidth
-        canvas.height = canvasHeight
-        
-        const ctx = canvas.getContext('2d')
-        
-        // 绘制白色背景
-        ctx.fillStyle = this.backgroundColor
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-        
-        // 绘制二维码（居中，留出上下padding）
-        const qrStartX = padding
-        const qrStartY = padding
-        
-        ctx.fillStyle = this.foregroundColor
-        for (let row = 0; row < moduleCount; row++) {
-          for (let col = 0; col < moduleCount; col++) {
-            if (qr.isDark(row, col)) {
-              ctx.fillRect(
-                qrStartX + col * cellSize,
-                qrStartY + row * cellSize,
-                cellSize,
-                cellSize
-              )
-            }
-          }
+        // 根据编码模式添加数据
+        try {
+          qr.addData(text + invisibleChars, this.qrMode)
+        } catch (e) {
+          // 如果指定模式失败，回退到Byte模式
+          console.warn(`编码模式 ${this.qrMode} 失败，回退到 Byte 模式`)
+          qr.addData(text + invisibleChars, 'Byte')
         }
         
-        // 绘制底部标签文字
-        ctx.fillStyle = '#333333'
-        ctx.font = '14px Arial, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
+        qr.make()
         
-        // 文字换行处理
-        const maxWidth = canvasWidth - padding * 2
-        const words = label.split('')
-        let line = ''
-        let y = qrCodeSize + padding * 2 + labelHeight / 2
-        
-        // 简单的文字截断，如果太长就显示省略号
-        if (ctx.measureText(label).width > maxWidth) {
-          let truncated = label
-          while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
-            truncated = truncated.slice(0, -1)
-          }
-          ctx.fillText(truncated + '...', canvasWidth / 2, y)
+        // 如果是SVG格式，使用SVG渲染
+        if (this.outputFormat === 'svg') {
+          this.drawQRCodeSVG(qr, label, canvas, index)
         } else {
-          ctx.fillText(label, canvasWidth / 2, y)
+          this.drawQRCodeCanvas(qr, label, canvas, index)
         }
         
       } catch (error) {
@@ -211,49 +220,202 @@ export default {
       }
     },
     
+    drawQRCodeCanvas(qr, label, canvas, index) {
+      // 获取二维码模块数量
+      const moduleCount = qr.getModuleCount()
+      
+      // 根据物理尺寸计算像素大小
+      const dpi = 300
+      const mmToInch = 25.4
+      const physicalSizeInch = this.qrPhysicalSize / mmToInch
+      const pixelSize = Math.round(physicalSizeInch * dpi)
+      
+      // 计算每个模块的像素大小
+      const cellSize = Math.max(1, Math.floor(pixelSize / moduleCount))
+      const qrCodeSize = cellSize * moduleCount
+      const padding = Math.max(10, Math.floor(qrCodeSize * 0.05))
+      const labelHeight = Math.max(30, Math.floor(qrCodeSize * 0.15))
+      
+      // 设置canvas大小
+      const canvasWidth = qrCodeSize + padding * 2
+      const canvasHeight = qrCodeSize + padding * 2 + labelHeight
+      
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      
+      const ctx = canvas.getContext('2d')
+      
+      // 绘制背景
+      ctx.fillStyle = this.backgroundColor
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+      
+      // 绘制二维码
+      const qrStartX = padding
+      const qrStartY = padding
+      
+      ctx.fillStyle = this.foregroundColor
+      for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+          if (qr.isDark(row, col)) {
+            ctx.fillRect(
+              qrStartX + col * cellSize,
+              qrStartY + row * cellSize,
+              cellSize,
+              cellSize
+            )
+          }
+        }
+      }
+      
+      // 绘制标签
+      ctx.fillStyle = '#333333'
+      const fontSize = Math.max(12, Math.floor(qrCodeSize * 0.04))
+      ctx.font = `${fontSize}px Arial, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      
+      const maxWidth = canvasWidth - padding * 2
+      const y = qrCodeSize + padding * 2 + labelHeight / 2
+      
+      if (ctx.measureText(label).width > maxWidth) {
+        let truncated = label
+        while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
+          truncated = truncated.slice(0, -1)
+        }
+        ctx.fillText(truncated + '...', canvasWidth / 2, y)
+      } else {
+        ctx.fillText(label, canvasWidth / 2, y)
+      }
+    },
+    
+    drawQRCodeSVG(qr, label, canvas, index) {
+      // SVG格式：创建SVG字符串并转换为图片显示在canvas上
+      const moduleCount = qr.getModuleCount()
+      const cellSize = 10
+      const qrCodeSize = cellSize * moduleCount
+      const padding = Math.max(10, Math.floor(qrCodeSize * 0.05))
+      const labelHeight = Math.max(30, Math.floor(qrCodeSize * 0.15))
+      
+      const canvasWidth = qrCodeSize + padding * 2
+      const canvasHeight = qrCodeSize + padding * 2 + labelHeight
+      
+      // 创建SVG字符串
+      let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}">`
+      
+      // 背景
+      svg += `<rect width="${canvasWidth}" height="${canvasHeight}" fill="${this.backgroundColor}"/>`
+      
+      // 二维码模块
+      for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+          if (qr.isDark(row, col)) {
+            const x = padding + col * cellSize
+            const y = padding + row * cellSize
+            svg += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${this.foregroundColor}"/>`
+          }
+        }
+      }
+      
+      // 标签文字
+      const fontSize = Math.max(12, Math.floor(qrCodeSize * 0.04))
+      const textY = qrCodeSize + padding * 2 + labelHeight / 2
+      svg += `<text x="${canvasWidth / 2}" y="${textY}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="#333333" text-anchor="middle" dominant-baseline="middle">${this.escapeXml(label)}</text>`
+      
+      svg += '</svg>'
+      
+      // 将SVG转换为图片显示在canvas上
+      const img = new Image()
+      const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+      
+      img.onload = () => {
+        canvas.width = canvasWidth
+        canvas.height = canvasHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        URL.revokeObjectURL(url)
+        
+        // 保存SVG数据供下载使用
+        this.qrCodes[index].svgData = svg
+      }
+      
+      img.src = url
+    },
+    
+    escapeXml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+    },
+    
     downloadSingle(index) {
       const canvas = this.canvasRefs[index]
       const item = this.qrCodes[index]
       
       if (!canvas) return
       
-      canvas.toBlob(blob => {
+      // 如果是SVG格式且有SVG数据，直接下载SVG
+      if (this.outputFormat === 'svg' && item.svgData) {
+        const blob = new Blob([item.svgData], { type: 'image/svg+xml;charset=utf-8' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${item.label}.png`
+        a.download = `${item.label}.svg`
         a.click()
         URL.revokeObjectURL(url)
-      })
+      } else {
+        // PNG格式
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `${item.label}.png`
+          a.click()
+          URL.revokeObjectURL(url)
+        })
+      }
     },
     
     async downloadAllAsZip() {
       if (this.qrCodes.length === 0) return
       
       try {
-        const zip = new JSZip()
+        const files = {}
+        const fileExt = this.outputFormat === 'svg' ? 'svg' : 'png'
         
-        // 将所有canvas转换为blob并添加到zip
+        // 将所有文件添加到files对象
         for (let i = 0; i < this.qrCodes.length; i++) {
           const canvas = this.canvasRefs[i]
           const item = this.qrCodes[i]
           
           if (canvas) {
-            // 使用Promise包装toBlob
-            const blob = await new Promise(resolve => {
-              canvas.toBlob(resolve)
-            })
+            const filename = `${item.label}.${fileExt}`
             
-            // 添加到zip，确保文件名唯一
-            const filename = `${item.label}.png`
-            zip.file(filename, blob)
+            if (this.outputFormat === 'svg' && item.svgData) {
+              // SVG格式：直接使用SVG字符串
+              files[filename] = strToU8(item.svgData)
+            } else {
+              // PNG格式：转换canvas为Uint8Array
+              const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve)
+              })
+              
+              const arrayBuffer = await blob.arrayBuffer()
+              files[filename] = new Uint8Array(arrayBuffer)
+            }
           }
         }
         
-        // 生成zip文件
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        // 使用fflate生成zip
+        const zipped = zipSync(files, {
+          level: 6 // 压缩级别 0-9
+        })
         
-        // 下载zip文件
+        // 创建blob并下载
+        const zipBlob = new Blob([zipped], { type: 'application/zip' })
         const url = URL.createObjectURL(zipBlob)
         const a = document.createElement('a')
         a.href = url
@@ -281,13 +443,7 @@ export default {
 .qrcode-generator {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
-}
-
-h3 {
-  margin: 0 0 20px 0;
-  color: #333;
-  font-size: 24px;
+  padding: 0;
 }
 
 .input-section {
@@ -328,7 +484,7 @@ textarea {
 
 .settings-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 15px;
   margin-bottom: 20px;
 }

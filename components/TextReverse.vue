@@ -12,7 +12,7 @@
         <textarea 
           id="inputText" 
           v-model="inputText" 
-          placeholder="请在此输入需要倒序的文本，例如：冬寒静烟临碧树残雪背晴楼冷天侵极戍寒月对行舟"
+          :placeholder="placeholderText"
           class="input-box"
         ></textarea>
         <p class="hint-text">输入要倒序的文本，点击"倒序"按钮查看结果。</p>
@@ -53,7 +53,14 @@ export default {
       inputText: '',
       reversedText: '',
       isMobile: false,
-      isFullscreen: false
+      isFullscreen: false,
+      placeholderText: `请在此输入需要倒序的文本
+例如：
+冬寒
+静烟临碧树
+残雪背晴楼
+冷天侵极戍
+寒月对行舟`
     };
   },
   mounted() {
@@ -110,7 +117,11 @@ export default {
       }
     },
     showExample() {
-      const exampleText = `冬寒静烟临碧树残雪背晴楼冷天侵极戍寒月对行舟`;
+      const exampleText = `冬寒
+静烟临碧树
+残雪背晴楼
+冷天侵极戍
+寒月对行舟`;
       this.inputText = exampleText;
       this.reversedText = exampleText.split('\n').map(line => line.split('').reverse().join('')).join('\n');
     },

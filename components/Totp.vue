@@ -389,8 +389,8 @@ export default {
 <style scoped>
 .totp-container {
   max-width: 600px;
-  margin: 20px auto;
-  padding: 16px;
+  margin: 10px auto;
+  padding: 12px;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
   background: #fff;
@@ -404,7 +404,7 @@ export default {
   transform: translateX(-50%);
   background: #67c23a;
   color: white;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 4px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   z-index: 9999;
@@ -420,14 +420,14 @@ export default {
 }
 
 h3 {
-  margin: 0 0 12px 0;
+  margin: 0 0 10px 0;
   color: #333;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .totp-input-section {
-  margin-bottom: 12px;
-  padding: 10px;
+  margin-bottom: 10px;
+  padding: 8px;
   background: #f5f5f5;
   border-radius: 4px;
 }
@@ -437,12 +437,12 @@ h3 {
 }
 
 .input-group:last-of-type {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .input-group label {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   font-weight: 500;
   color: #555;
   font-size: 12px;
@@ -450,7 +450,7 @@ h3 {
 
 .input-group input {
   width: 100%;
-  padding: 6px 8px;
+  padding: 5px 8px;
   border: 1px solid #ddd;
   border-radius: 3px;
   font-size: 12px;
@@ -460,6 +460,7 @@ h3 {
 .btn-row {
   display: flex;
   gap: 6px;
+  margin-top: 6px;
 }
 
 .btn-add {
@@ -494,10 +495,10 @@ h3 {
 }
 
 .advanced-toggle {
-  margin: 8px 0 6px 0;
-  padding: 4px 0;
+  margin: 6px 0 4px 0;
+  padding: 3px 0;
   color: #409eff;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   user-select: none;
 }
@@ -517,11 +518,11 @@ h3 {
 }
 
 .totp-list {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .totp-item {
-  padding: 12px;
+  padding: 10px;
   margin-bottom: 8px;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -548,7 +549,7 @@ h3 {
 .account-name {
   font-weight: 600;
   color: #333;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .account-username {
@@ -558,11 +559,11 @@ h3 {
 
 .btn-group {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .btn-edit {
-  padding: 4px 10px;
+  padding: 3px 8px;
   background: #409eff;
   color: white;
   border: none;
@@ -577,7 +578,7 @@ h3 {
 
 .totp-code {
   display: block;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #42b983;
   letter-spacing: 2px;
@@ -615,9 +616,9 @@ h3 {
 .secret-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 6px;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .secret-label {
@@ -627,7 +628,7 @@ h3 {
 }
 
 .secret-value {
-  font-size: 11px;
+  font-size: 10px;
   color: #999;
   font-family: 'Courier New', monospace;
   letter-spacing: 0.5px;
@@ -643,7 +644,7 @@ h3 {
 }
 
 .btn-remove {
-  padding: 4px 10px;
+  padding: 3px 8px;
   background: #f56c6c;
   color: white;
   border: none;
@@ -658,7 +659,7 @@ h3 {
 
 .empty-state {
   text-align: center;
-  padding: 30px;
+  padding: 20px;
   color: #999;
   font-size: 13px;
 }

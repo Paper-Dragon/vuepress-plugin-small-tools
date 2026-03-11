@@ -1,33 +1,5 @@
 <template>
   <div class="frp-container">
-    <!-- CORS 警告提示 -->
-    <div class="cors-warning">
-      <h4>⚠️ 跨域访问说明</h4>
-      <p>由于浏览器安全策略，直接访问FRP Dashboard API可能会遇到CORS跨域问题。</p>
-      <details>
-        <summary>查看解决方案</summary>
-        <div class="solutions">
-          <h5>方案1：使用反向代理（推荐）</h5>
-          <p>在你的服务器上配置Nginx反向代理：</p>
-          <pre><code>location /frp-api/ {
-    proxy_pass http://frp.geekery.cn:7500/;
-    proxy_set_header Host $host;
-    add_header Access-Control-Allow-Origin *;
-}</code></pre>
-          
-          <h5>方案2：配置FRP Dashboard</h5>
-          <p>在FRP Dashboard配置中添加CORS支持（需要服务器权限）</p>
-          
-          <h5>方案3：浏览器扩展（临时方案）</h5>
-          <p>安装CORS浏览器扩展（仅用于开发测试）：</p>
-          <ul>
-            <li>Chrome: CORS Unblock</li>
-            <li>Firefox: CORS Everywhere</li>
-          </ul>
-        </div>
-      </details>
-    </div>
-
     <!-- 配置面板 -->
     <div class="config-panel">
       <div class="config-header" @click="showConfig = !showConfig">
@@ -37,7 +9,7 @@
       <div v-if="showConfig" class="config-content">
         <div class="input-group">
           <label>API地址：</label>
-          <input v-model="apiUrl" placeholder="例如：http://frp.geekery.cn:7500" />
+          <input v-model="apiUrl" placeholder="例如：https://frp.geekery.cn" />
         </div>
         
         <div class="input-group">
@@ -119,7 +91,7 @@ export default {
       loading: false,
       proxies: [],
       showConfig: false,
-      apiUrl: 'http://frp.geekery.cn:7500',
+      apiUrl: 'https://frp.geekery.cn',
       username: 'admin',
       password: '',
       errorMessage: '',
@@ -227,81 +199,6 @@ export default {
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   position: relative;
-}
-
-.cors-warning {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 6px;
-  color: #856404;
-}
-
-.cors-warning h4 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #856404;
-}
-
-.cors-warning p {
-  margin: 5px 0;
-  font-size: 14px;
-}
-
-.cors-warning details {
-  margin-top: 10px;
-}
-
-.cors-warning summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: #0056b3;
-  user-select: none;
-}
-
-.cors-warning summary:hover {
-  text-decoration: underline;
-}
-
-.solutions {
-  margin-top: 10px;
-  padding: 10px;
-  background: #fff;
-  border-radius: 4px;
-}
-
-.solutions h5 {
-  margin: 10px 0 5px 0;
-  font-size: 14px;
-  color: #333;
-}
-
-.solutions p {
-  margin: 5px 0;
-  font-size: 13px;
-}
-
-.solutions pre {
-  background: #f5f5f5;
-  padding: 10px;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 12px;
-}
-
-.solutions code {
-  font-family: 'Courier New', monospace;
-}
-
-.solutions ul {
-  margin: 5px 0;
-  padding-left: 20px;
-}
-
-.solutions li {
-  font-size: 13px;
-  margin: 3px 0;
 }
 
 .config-panel {

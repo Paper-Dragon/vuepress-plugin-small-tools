@@ -1,13 +1,11 @@
-const { resolve } = require('path');
+import { getDirname, path } from 'vuepress/utils'
 
-module.exports = (options = {}, context) => {
+const __dirname = getDirname(import.meta.url)
+
+export default (options = {}) => {
   return {
     name: 'vuepress-plugin-small-tools',
     
-    enhanceAppFiles: [
-      resolve(__dirname, 'enhanceApp.js')
-    ],
-    
-    clientConfigFile: resolve(__dirname, './client.js').replace(/\\/g, '/')
-  };
-};
+    clientConfigFile: path.resolve(__dirname, './client.js'),
+  }
+}
