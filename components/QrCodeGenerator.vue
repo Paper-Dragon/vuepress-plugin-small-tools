@@ -82,7 +82,7 @@ tel:13800138000,联系电话"
       
       <div class="button-row">
         <button @click="generateQRCodes" class="btn-generate" :disabled="isGenerating">
-          {{ isGenerating ? '生成中...' : '生成二维码' }}
+          {{ isGenerating ? `生成中 (${generatedCount}/${qrCodes.length})...` : '生成二维码' }}
         </button>
         <button @click="downloadAllAsZip" class="btn-download" :disabled="qrCodes.length === 0 || isGenerating">
           下载压缩包 ({{ qrCodes.length }})
@@ -112,7 +112,6 @@ tel:13800138000,联系电话"
 </template>
 
 <script>
-import qrcode from 'qrcode-generator'
 import { zipSync, strToU8 } from 'fflate'
 
 export default {
@@ -130,10 +129,82 @@ export default {
       qrCodes: [],
       canvasRefs: [],
       errorMessage: '',
-      isGenerating: false
+      isGenerating: false,
+      generatedCount: 0,
+      qrcode: null // 动态加载的 qrcode 模块
+    }
+  },
+  async mounted() {
+    // 方案1: 尝试从 CDN 加载
+    try {
+      // 如果已经有全局的 qrcode，检查是否为函数
+      if (window.qrcode) {
+        if (typeof window.qrcode === 'function') {
+          this.qrcode = window.qrcode
+          console.log('使用全局 window.qrcode')
+          return
+        } else if (window.qrcode.default && typeof window.qrcode.default === 'function') {
+          // 处理 UMD 导出在 default 属性中的情况
+          window.qrcode = window.qrcode.default
+          this.qrcode = window.qrcode
+          console.log('使用全局 window.qrcode.default')
+          return
+        } else if (window.qrcode.qrcode && typeof window.qrcode.qrcode === 'function') {
+          // 处理 UMD 导出在 qrcode 属性中的情况
+          window.qrcode = window.qrcode.qrcode
+          this.qrcode = window.qrcode
+          console.log('使用全局 window.qrcode.qrcode')
+          return
+        }
+      }
+      
+      // 尝试通过 script 标签加载
+      await this.loadQRCodeFromCDN()
+      
+      if (window.qrcode && typeof window.qrcode === 'function') {
+        this.qrcode = window.qrcode
+        console.log('从 CDN 加载成功')
+      } else {
+        throw new Error('CDN 加载失败')
+      }
+    } catch (error) {
+      console.error('加载二维码生成器失败:', error)
+      this.errorMessage = '加载二维码生成器失败，请刷新页面重试'
     }
   },
   methods: {
+    loadQRCodeFromCDN() {
+      return new Promise((resolve, reject) => {
+        // 检查是否已经加载
+        if (window.qrcode) {
+          resolve()
+          return
+        }
+        
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js'
+        script.onload = () => {
+          // qrcode-generator UMD 导出可能挂载在 qrcode.default 或 qrcode 上
+          // 尝试多种方式获取
+          if (window.qrcode && typeof window.qrcode === 'function') {
+            // 已经是一个函数，直接使用
+            resolve()
+          } else if (window.qrcode && window.qrcode.default && typeof window.qrcode.default === 'function') {
+            // 需要使用 default 属性
+            window.qrcode = window.qrcode.default
+            resolve()
+          } else if (window.qrcode && window.qrcode.qrcode && typeof window.qrcode.qrcode === 'function') {
+            // 需要使用 qrcode 属性
+            window.qrcode = window.qrcode.qrcode
+            resolve()
+          } else {
+            reject(new Error('无法识别 qrcode-generator 导出格式'))
+          }
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      })
+    },
     setCanvasRef(el, index) {
       if (el) {
         this.canvasRefs[index] = el
@@ -145,6 +216,12 @@ export default {
       this.qrCodes = []
       this.canvasRefs = []
       this.isGenerating = true
+      
+      if (!this.qrcode) {
+        this.errorMessage = '二维码生成器未加载，请刷新页面重试'
+        this.isGenerating = false
+        return
+      }
       
       if (!this.inputText.trim()) {
         this.errorMessage = '请输入要生成的数据'
@@ -163,36 +240,85 @@ export default {
       // 生成一个随机种子，用于本次批量生成
       const batchSeed = Date.now()
       
+      // 解析所有数据
+      const parsedData = []
       lines.forEach((line, idx) => {
         const parts = line.split(',')
         const content = parts[0]?.trim()
         const label = parts[1]?.trim() || '未命名'
         
         if (content) {
-          this.qrCodes.push({
+          parsedData.push({
             content,
             label,
-            seed: batchSeed + idx // 每个二维码有唯一的种子
+            seed: batchSeed + idx
           })
         }
       })
       
-      // 等待DOM更新后生成二维码
-      this.$nextTick(() => {
-        this.qrCodes.forEach((item, index) => {
-          this.drawQRCode(item.content, item.label, item.seed, index)
+      this.qrCodes = parsedData
+      
+      // 使用并发批量生成，避免阻塞主线程
+      this.generateQRCodesInBatches(0)
+    },
+    
+    // 批量并发生成二维码
+    generateQRCodesInBatches(startIndex) {
+      const BATCH_SIZE = 5 // 每批处理数量
+      const DELAY_MS = 10 // 批次间隔时间（毫秒），让UI有机会更新
+      
+      const generateBatch = () => {
+        const endIndex = Math.min(startIndex + BATCH_SIZE, this.qrCodes.length)
+        
+        // 并发生成这一批次的二维码
+        const batchPromises = []
+        for (let i = startIndex; i < endIndex; i++) {
+          batchPromises.push(
+            new Promise(resolve => {
+              // 使用 setTimeout(0) 让出主线程，实现真正的并发
+              setTimeout(() => {
+                this.drawQRCode(
+                  this.qrCodes[i].content,
+                  this.qrCodes[i].label,
+                  this.qrCodes[i].seed,
+                  i
+                )
+                resolve()
+              }, 0)
+            })
+          )
+        }
+        
+        // 等待这一批次完成
+        Promise.all(batchPromises).then(() => {
+          // 更新进度
+          this.generatedCount = endIndex
+          
+          // 如果还有更多，继续处理下一批
+          if (endIndex < this.qrCodes.length) {
+            // 使用 requestAnimationFrame 让UI更新
+            requestAnimationFrame(() => {
+              this.generateQRCodesInBatches(endIndex)
+            })
+          } else {
+            // 全部完成
+            this.isGenerating = false
+            this.generatedCount = 0
+          }
         })
-        this.isGenerating = false
-      })
+      }
+      
+      // 开始生成第一批
+      generateBatch()
     },
     
     drawQRCode(text, label, seed, index) {
       const canvas = this.canvasRefs[index]
-      if (!canvas) return
+      if (!canvas || !this.qrcode) return
       
       try {
         // 创建二维码对象，使用用户选择的版本或自动选择
-        const qr = qrcode(this.qrVersion, this.errorLevel)
+        const qr = this.qrcode(this.qrVersion, this.errorLevel)
         // 在内容末尾添加不可见字符（零宽空格）+ 随机种子来改变掩码
         const invisibleChars = '\u200B'.repeat(seed % 10)
         
