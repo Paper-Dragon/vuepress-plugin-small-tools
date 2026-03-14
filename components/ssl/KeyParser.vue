@@ -321,7 +321,32 @@ function parseKey() {
     errorMsg.value = '请输入密钥内容'
     return
   }
-  parsePrivateKey(keyInput.value.trim())
+  
+  // 增强的输入验证
+  const input = keyInput.value.trim()
+  const hasPrivateKey = input.includes('BEGIN PRIVATE KEY') || 
+                        input.includes('BEGIN RSA PRIVATE KEY') || 
+                        input.includes('BEGIN EC PRIVATE KEY')
+  const hasPublicKey = input.includes('BEGIN PUBLIC KEY') || 
+                       input.includes('BEGIN RSA PUBLIC KEY')
+  
+  if (!hasPrivateKey && !hasPublicKey) {
+    errorMsg.value = '无效的密钥格式：缺少 BEGIN 标记。请确保输入的是 PEM 格式的密钥。'
+    return
+  }
+  
+  const hasEndMarker = input.includes('END PRIVATE KEY') || 
+                       input.includes('END RSA PRIVATE KEY') || 
+                       input.includes('END EC PRIVATE KEY') ||
+                       input.includes('END PUBLIC KEY') ||
+                       input.includes('END RSA PUBLIC KEY')
+  
+  if (!hasEndMarker) {
+    errorMsg.value = '无效的密钥格式：缺少 END 标记。请确保密钥内容完整。'
+    return
+  }
+  
+  parsePrivateKey(input)
 }
 
 function reset() {

@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "fflate": "^0.8.2",
+    "iconv-lite": "^0.7.2",
     "otpauth": "^9.5.0",
     "qrcode": "^1.5.4",
     "qrcode-generator": "^1.5.2"

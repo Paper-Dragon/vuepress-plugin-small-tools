@@ -141,19 +141,16 @@ export default {
       if (window.qrcode) {
         if (typeof window.qrcode === 'function') {
           this.qrcode = window.qrcode
-          console.log('使用全局 window.qrcode')
           return
         } else if (window.qrcode.default && typeof window.qrcode.default === 'function') {
           // 处理 UMD 导出在 default 属性中的情况
           window.qrcode = window.qrcode.default
           this.qrcode = window.qrcode
-          console.log('使用全局 window.qrcode.default')
           return
         } else if (window.qrcode.qrcode && typeof window.qrcode.qrcode === 'function') {
           // 处理 UMD 导出在 qrcode 属性中的情况
           window.qrcode = window.qrcode.qrcode
           this.qrcode = window.qrcode
-          console.log('使用全局 window.qrcode.qrcode')
           return
         }
       }
@@ -163,7 +160,6 @@ export default {
       
       if (window.qrcode && typeof window.qrcode === 'function') {
         this.qrcode = window.qrcode
-        console.log('从 CDN 加载成功')
       } else {
         throw new Error('CDN 加载失败')
       }

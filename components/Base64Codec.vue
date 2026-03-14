@@ -7,14 +7,16 @@
       <label for="encodingSelect">字符编码:</label>
       <select id="encodingSelect" v-model="selectedEncoding">
         <option value="utf-8">UTF-8 (默认)</option>
-        <option value="gbk">GBK</option>
-        <option value="gb2312">GB2312</option>
-        <option value="big5">Big5</option>
-        <option value="shift_jis">Shift_JIS</option>
-        <option value="euc-jp">EUC-JP</option>
-        <option value="iso-8859-1">ISO-8859-1</option>
-        <option value="windows-1252">Windows-1252</option>
+        <option value="gbk">GBK (简体中文)</option>
+        <option value="gb2312">GB2312 (简体中文)</option>
+        <option value="big5">Big5 (繁体中文)</option>
+        <option value="shift_jis">Shift_JIS (日文)</option>
+        <option value="euc-jp">EUC-JP (日文)</option>
+        <option value="euc-kr">EUC-KR (韩文)</option>
+        <option value="iso-8859-1">ISO-8859-1 (西欧)</option>
+        <option value="windows-1252">Windows-1252 (西欧)</option>
       </select>
+      <p class="encoding-note">提示: 使用 iconv-lite 库支持多种字符编码</p>
     </div>
     
     <!-- 输入框 -->
@@ -67,6 +69,8 @@
 </template>
 
 <script>
+import iconv from 'iconv-lite'
+
 export default {
   data() {
     return {
@@ -97,6 +101,15 @@ export default {
     },
     encodeText(event) {
       try {
+        // 检查输入大小（限制为 10MB）
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const inputSize = new Blob([this.inputText]).size;
+        
+        if (inputSize > maxSize) {
+          this.resultText = '错误：输入内容过大（超过 10MB），请使用较小的文件或文本';
+          return;
+        }
+        
         // 如果输入是Base64图片，直接提取Base64部分
         if (this.isBase64Image(this.inputText)) {
           const base64Match = this.inputText.match(/base64,(.+)$/);
@@ -106,19 +119,26 @@ export default {
           }
         }
         
-        // 普通文本编码
-        const encoder = new TextEncoder();
-        const encoded = encoder.encode(this.inputText);
-        
-        // 分块处理避免栈溢出
-        const chunkSize = 8192;
-        let result = '';
-        for (let i = 0; i < encoded.length; i += chunkSize) {
-          const chunk = encoded.slice(i, i + chunkSize);
-          result += String.fromCharCode(...chunk);
+        // 使用 iconv-lite 进行编码转换
+        let encoded;
+        if (this.selectedEncoding === 'utf-8') {
+          // UTF-8 使用原生 TextEncoder
+          const encoder = new TextEncoder();
+          encoded = encoder.encode(this.inputText);
+        } else {
+          // 其他编码使用 iconv-lite
+          encoded = iconv.encode(this.inputText, this.selectedEncoding);
         }
         
-        this.resultText = btoa(result);
+        // 转换为 base64
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < encoded.length; i += chunkSize) {
+          const chunk = encoded.slice(i, i + chunkSize);
+          binary += String.fromCharCode(...chunk);
+        }
+        
+        this.resultText = btoa(binary);
       } catch (err) {
         this.resultText = '编码失败：' + err.message;
       }
@@ -136,16 +156,23 @@ export default {
           throw error;
         }
         
-        const decoder = new TextDecoder(this.selectedEncoding);
-        
-        // 分块处理避免栈溢出
-        const chunkSize = 8192;
+        // 转换为 Uint8Array
         const bytes = new Uint8Array(decodedStr.length);
         for (let i = 0; i < decodedStr.length; i++) {
           bytes[i] = decodedStr.charCodeAt(i);
         }
         
-        const decoded = decoder.decode(bytes);
+        // 使用 iconv-lite 进行解码
+        let decoded;
+        if (this.selectedEncoding === 'utf-8') {
+          // UTF-8 使用原生 TextDecoder
+          const decoder = new TextDecoder('utf-8');
+          decoded = decoder.decode(bytes);
+        } else {
+          // 其他编码使用 iconv-lite
+          decoded = iconv.decode(Buffer.from(bytes), this.selectedEncoding);
+        }
+        
         this.resultText = decoded;
         
         if (this.isBase64Image(this.resultText)) {
@@ -160,11 +187,23 @@ export default {
       const file = e.target.files[0];
       if (!file) return;
       
+      // 检查文件大小（限制为 10MB）
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert('文件过大！最大支持 10MB 的文件。当前文件大小: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB');
+        e.target.value = ''; // 清空文件选择
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         this.imageSrc = reader.result;
         this.inputText = reader.result;
         this.imageArea = 'input';
+      };
+      reader.onerror = () => {
+        alert('文件读取失败，请重试');
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
     },
@@ -208,6 +247,13 @@ export default {
 .form-group label {
   display: block;
   margin-bottom: 5px;
+}
+
+.encoding-note {
+  margin: 5px 0 0 0;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
 }
 
 .text-area-container {

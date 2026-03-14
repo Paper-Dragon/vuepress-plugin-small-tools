@@ -134,6 +134,17 @@ function parse() {
     return
   }
   
+  // 增强的输入验证
+  if (!certInput.value.includes('BEGIN CERTIFICATE')) {
+    errorMsg.value = '无效的证书格式：缺少 BEGIN CERTIFICATE 标记。请确保输入的是 PEM 格式的证书。'
+    return
+  }
+  
+  if (!certInput.value.includes('END CERTIFICATE')) {
+    errorMsg.value = '无效的证书格式：缺少 END CERTIFICATE 标记。请确保证书内容完整。'
+    return
+  }
+  
   try {
     const bytes = pemToBytes(certInput.value)
     
