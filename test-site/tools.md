@@ -143,3 +143,11 @@ JSON Web Token解码工具。
 房贷计算器，支持商业贷款和公积金贷款。
 
 <LoanCalculator />
+
+---
+
+## SSL 证书生成
+
+自签名 SSL 证书生成工具，支持离线模式生成。
+
+<SSLGenerate />

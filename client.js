@@ -17,6 +17,7 @@ import JwtDecoder from './components/JwtDecoder.vue'
 import WordCounter from './components/WordCounter.vue'
 import LoanCalculator from './components/LoanCalculator.vue'
 import BmiCalculator from './components/BmiCalculator.vue'
+import SSLGenerate from './components/SSLGenerate.vue'
 
 export default defineClientConfig({
   enhance({ app, router, siteData }) {
@@ -39,6 +40,7 @@ export default defineClientConfig({
     app.component('WordCounter', WordCounter)
     app.component('LoanCalculator', LoanCalculator)
     app.component('BmiCalculator', BmiCalculator)
+    app.component('SSLGenerate', SSLGenerate)
   },
   
   setup() {
